@@ -1,5 +1,5 @@
-// Use this editor to write, compile and run your Java code online
 import java.util.*;
+import java.util.Scanner;
 
 abstract class User {
     protected int id;
@@ -31,13 +31,11 @@ abstract class User {
 }
 
 class Admin extends User {
-
     public Admin(int id, String name, String email, String password) {
         super(id, name, email, password, "ADMIN");
-        approve(); // auto-approved
+        approve();
     }
 
-    @Override
     public void showMenu() {
         System.out.println("\n--- ADMIN DASHBOARD ---");
         System.out.println("1. Approve Users");
@@ -47,12 +45,10 @@ class Admin extends User {
 }
 
 class Owner extends User {
-
     public Owner(int id, String name, String email, String password) {
         super(id, name, email, password, "OWNER");
     }
 
-    @Override
     public void showMenu() {
         System.out.println("\n--- OWNER DASHBOARD ---");
         System.out.println("1. Add Property");
@@ -62,14 +58,11 @@ class Owner extends User {
     }
 }
 
-
 class Tenant extends User {
-
     public Tenant(int id, String name, String email, String password) {
         super(id, name, email, password, "TENANT");
     }
 
-    @Override
     public void showMenu() {
         System.out.println("\n--- TENANT DASHBOARD ---");
         System.out.println("1. View Rooms");
@@ -80,12 +73,10 @@ class Tenant extends User {
 }
 
 class Staff extends User {
-
     public Staff(int id, String name, String email, String password) {
         super(id, name, email, password, "STAFF");
     }
 
-    @Override
     public void showMenu() {
         System.out.println("\n--- STAFF DASHBOARD ---");
         System.out.println("1. View Tasks");
@@ -109,21 +100,23 @@ class Property {
 }
 
 
-
 class AuthService {
+
     static ArrayList<User> users = new ArrayList<>();
+    static ArrayList<String> emails = new ArrayList<>(); 
     static int idCounter = 1;
 
     public static void register(String name, String email, String pass, String role) {
 
-        if (!Validator.isValidEmail(email) || !Validator.isValidPassword(pass)) {
-            System.out.println("❌ Invalid input!");
-            return;
+  
+        if (emails.contains(email)) {
+            System.out.println("Email already exists. Try another.");
+            return; // stop registration
         }
 
         User user = null;
 
-        switch(role.toUpperCase()) {
+        switch (role.toUpperCase()) {
             case "ADMIN":
                 user = new Admin(idCounter++, name, email, pass);
                 break;
@@ -138,15 +131,20 @@ class AuthService {
                 break;
         }
 
-        users.add(user);
-        System.out.println("✅ Registered Successfully. Awaiting approval (if not admin).");
+        // ✅ Add user and email only if valid
+        if (user != null) {
+            users.add(user);
+            emails.add(email);  // ✅ store email
+
+            System.out.println("Registered Successfully. Awaiting approval (if not admin).");
+        }
     }
 
     public static User login(String email, String pass) {
         for (User u : users) {
             if (u.getEmail().equals(email) && u.getPassword().equals(pass)) {
                 if (!u.isApproved()) {
-                    System.out.println("⏳ Waiting for admin approval.");
+                    System.out.println("Waiting for admin approval.");
                     return null;
                 }
                 System.out.println("✅ Login successful!");
@@ -158,8 +156,10 @@ class AuthService {
     }
 }
 
-
 class Validator {
+    public static boolean isValidName(String name) {
+        return name != null && name.matches("^[a-zA-Z ]+$");
+    }
 
     public static boolean isValidEmail(String email) {
         return email.contains("@") && email.endsWith(".com");
@@ -176,13 +176,54 @@ class PropertyService {
 
     public static void addProperty(String addr, String facilities) {
         properties.add(new Property(idCounter++, addr, facilities));
-        System.out.println("✅ Property request sent for approval.");
+        System.out.println("Property request sent for approval.");
     }
 
     public static void viewProperties() {
         for (Property p : properties) {
             System.out.println("ID: " + p.id + " Address: " + p.address + " Status: " + p.status);
         }
+    }
+}
+
+class Complaint {
+    int id;
+    String description;
+    String status;
+
+    public Complaint(int id, String desc) {
+        this.id = id;
+        this.description = desc;
+        this.status = "PENDING";
+    }
+}
+
+class ComplaintService {
+    static ArrayList<Complaint> complaints = new ArrayList<>();
+    static int idCounter = 1;
+
+    public static void raiseComplaint(String desc) {
+        complaints.add(new Complaint(idCounter++, desc));
+        System.out.println("✅ Complaint submitted.");
+    }
+
+    public static void viewComplaints() {
+        for (Complaint c : complaints) {
+            System.out.println("ID: " + c.id +
+                " | " + c.description +
+                " | Status: " + c.status);
+        }
+    }
+
+    public static void resolveComplaint(int id) {
+        for (Complaint c : complaints) {
+            if (c.id == id) {
+                c.status = "RESOLVED";
+                System.out.println("✅ Complaint resolved.");
+                return;
+            }
+        }
+        System.out.println("❌ Complaint not found.");
     }
 }
 
@@ -200,6 +241,13 @@ public class Main {
             System.out.println("1. Register");
             System.out.println("2. Login");
             System.out.println("3. Exit");
+            System.out.print("Enter choice: ");
+
+            if (!sc.hasNextInt()) {
+                System.out.println("Invalid input. Please enter a number.");
+                sc.next(); // clear invalid input
+                continue;
+            }
 
             int choice = sc.nextInt();
             sc.nextLine();
@@ -207,50 +255,144 @@ public class Main {
             switch (choice) {
 
                 case 1:
-                    System.out.print("Name: ");
-                    String name = sc.nextLine();
-
-                    System.out.print("Email: ");
-                    String email = sc.nextLine();
-
-                    System.out.print("Password: ");
-                    String pass = sc.nextLine();
-
-                    System.out.print("Role (ADMIN/OWNER/TENANT/STAFF): ");
-                    String role = sc.nextLine();
-
-                    AuthService.register(name, email, pass, role);
+                    handleRegister();
                     break;
 
                 case 2:
-                    System.out.print("Email: ");
-                    email = sc.nextLine();
-
-                    System.out.print("Password: ");
-                    pass = sc.nextLine();
-
-                    User user = AuthService.login(email, pass);
-
-                    if (user != null) {
-                        handleUser(user);
-                    }
+                    handleLogin();
                     break;
 
                 case 3:
                     System.out.println("👋 Goodbye!");
                     return;
+
+                default:
+                    System.out.println("Invalid menu option.");
             }
         }
     }
 
+    // ================= REGISTER =================
+    static void handleRegister() {
+
+        String name, email, pass;
+        int roleChoice;
+
+        // ✅ Name validation
+        while (true) {
+            System.out.print("Name: ");
+            name = sc.nextLine();
+
+            if (Validator.isValidName(name)) {
+                break;
+            } else {
+                System.out.println("Name must contain only letters and spaces.");
+            }
+        }
+        // ✅ Email validation
+        
+while (true) {
+    System.out.print("Email: ");
+    email = sc.nextLine();
+
+    if (!Validator.isValidEmail(email)) {
+        System.out.println("Invalid email format.");
+        continue;
+    }
+
+    // ✅ CHECK DUPLICATE HERE (IMMEDIATE)
+    if (AuthService.emails.contains(email)) {
+        System.out.println("Email already exists.");
+        continue;
+    }
+
+    break; // ✅ only when valid + unique
+}
+
+        // ✅ Password validation
+        while (true) {
+            System.out.print("Password: ");
+            pass = sc.nextLine();
+
+            if (Validator.isValidPassword(pass)) {
+                break;
+            } else {
+                System.out.println("Password must be at least 6 characters.");
+            }
+        }
+
+        // ✅ Role selection
+        while (true) {
+            System.out.println("Select Role:");
+            System.out.println("1. ADMIN");
+            System.out.println("2. OWNER");
+            System.out.println("3. TENANT");
+            System.out.println("4. STAFF");
+            System.out.print("Enter choice: ");
+
+            if (sc.hasNextInt()) {
+                roleChoice = sc.nextInt();
+                sc.nextLine();
+
+                if (roleChoice >= 1 && roleChoice <= 4) {
+                    break;
+                } else {
+                    System.out.println("Invalid role selection.");
+                }
+            } else {
+                System.out.println("Enter a valid number.");
+                sc.next(); // clear invalid input
+            }
+        }
+
+        String role = switch (roleChoice) {
+            case 1 -> "ADMIN";
+            case 2 -> "OWNER";
+            case 3 -> "TENANT";
+            case 4 -> "STAFF";
+            default -> "";
+        };
+
+        AuthService.register(name, email, pass, role);
+    }
+
+    // ================= LOGIN =================
+    static void handleLogin() {
+
+        System.out.print("Email: ");
+        String email = sc.nextLine();
+
+        System.out.print("Password: ");
+        String pass = sc.nextLine();
+
+        User user = AuthService.login(email, pass);
+
+        if (user != null) {
+            handleUser(user);
+        } else {
+            System.out.println("Invalid login credentials.");
+        }
+    }
+
+    // ================= USER MENU =================
     static void handleUser(User user) {
 
         while (true) {
+
             user.showMenu();
+
+            if (!sc.hasNextInt()) {
+                System.out.println("Invalid input.");
+                sc.next();
+                continue;
+            }
+
             int choice = sc.nextInt();
 
+            // ================= OWNER =================
             if (user instanceof Owner) {
-                switch(choice) {
+                switch (choice) {
+
                     case 1:
                         sc.nextLine();
                         System.out.print("Address: ");
@@ -268,22 +410,36 @@ public class Main {
 
                     case 4:
                         return;
+
+                    default:
+                        System.out.println("Invalid choice.");
                 }
             }
 
+            // ================= TENANT =================
             else if (user instanceof Tenant) {
-                switch(choice) {
+                switch (choice) {
+
                     case 2:
-                        System.out.println("✅ Complaint registered.");
+                        sc.nextLine();
+                        System.out.print("Enter complaint: ");
+                        String desc = sc.nextLine();
+
+                        ComplaintService.raiseComplaint(desc);
                         break;
 
                     case 4:
                         return;
+
+                    default:
+                        System.out.println("Invalid choice.");
                 }
             }
 
+            // ================= ADMIN =================
             else if (user instanceof Admin) {
-                switch(choice) {
+                switch (choice) {
+
                     case 1:
                         for (User u : AuthService.users) {
                             if (!u.isApproved()) {
@@ -293,8 +449,24 @@ public class Main {
                         }
                         break;
 
+                    case 2:
+                        ComplaintService.viewComplaints();
+                        System.out.print("Enter complaint ID to resolve: ");
+
+                        if (sc.hasNextInt()) {
+                            int id = sc.nextInt();
+                            ComplaintService.resolveComplaint(id);
+                        } else {
+                            System.out.println("Invalid ID.");
+                            sc.next();
+                        }
+                        break;
+
                     case 3:
                         return;
+
+                    default:
+                        System.out.println("Invalid choice.");
                 }
             }
         }

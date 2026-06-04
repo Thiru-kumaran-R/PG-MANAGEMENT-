@@ -18,10 +18,21 @@ abstract class User {
         this.approved = false;
     }
 
-    public String getEmail() { return email; }
-    public String getPassword() { return password; }
-    public String getRole() { return role; }
-    public boolean isApproved() { return approved; }
+    public String getEmail() {
+        return email;
+    }
+
+    public String getPassword() {
+        return password;
+    }
+
+    public String getRole() {
+        return role;
+    }
+
+    public boolean isApproved() {
+        return approved;
+    }
 
     public void approve() {
         this.approved = true;
@@ -103,12 +114,12 @@ class Property {
 class AuthService {
 
     static ArrayList<User> users = new ArrayList<>();
-    static ArrayList<String> emails = new ArrayList<>(); 
+    static ArrayList<String> emails = new ArrayList<>();
     static int idCounter = 1;
 
     public static void register(String name, String email, String pass, String role) {
 
-  
+
         if (emails.contains(email)) {
             System.out.println("Email already exists. Try another.");
             return; // stop registration
@@ -154,6 +165,18 @@ class AuthService {
         System.out.println("❌ Invalid credentials!");
         return null;
     }
+    
+    public static void forgotPassword(String email) {
+    for (User u : users) {
+        if (u.getEmail().equals(email)) {
+            System.out.println("✅ Password found!");
+            System.out.println("Your password is: " + u.getPassword());
+            return;
+        }
+    }
+    System.out.println("❌ Email not registered.");
+}
+
 }
 
 class Validator {
@@ -209,9 +232,7 @@ class ComplaintService {
 
     public static void viewComplaints() {
         for (Complaint c : complaints) {
-            System.out.println("ID: " + c.id +
-                " | " + c.description +
-                " | Status: " + c.status);
+            System.out.println("ID: " + c.id + " | " + c.description + " | Status: " + c.status);
         }
     }
 
@@ -227,6 +248,83 @@ class ComplaintService {
     }
 }
 
+//Tenant
+
+class Room {
+    int roomId;
+    String type;
+    double rent;
+    boolean available;
+    String bookedBy;
+
+    Room(int roomId, String type, double rent) {
+        this.roomId = roomId;
+        this.type = type;
+        this.rent = rent;
+        this.available = true;
+        this.bookedBy = null;
+    }
+}
+
+class RoomService {
+    static ArrayList<Room> rooms = new ArrayList<>();
+
+    static {
+        rooms.add(new Room(101, "Single", 11000));
+        rooms.add(new Room(104, "Double", 9000));
+        rooms.add(new Room(133, "Triple", 7000));
+        rooms.add(new Room(243, "Double", 9000));
+        rooms.add(new Room(333, "Triple", 9500)); // ✅ fixed duplicate ID
+    }
+
+    public static void viewRooms() {
+        System.out.println("\nAvailable Rooms:");
+        for (Room r : rooms) {
+            if (r.available) {
+                System.out.println("Room ID: " + r.roomId +
+                        " | Type: " + r.type +
+                        " | Rent: ₹" + r.rent);
+            }
+        }
+    }
+
+    // ✅ BOOK ROOM (FIXED LOCATION)
+    public static void bookRoom(int roomId, String tenantName) {
+        for (Room r : rooms) {
+            if (r.roomId == roomId && r.available) {
+                r.available = false;
+                r.bookedBy = tenantName;
+                System.out.println("✅ Room booked successfully!");
+                return;
+            }
+        }
+        System.out.println("❌ Room not available.");
+    }
+
+    // ✅ OPTIONAL: VIEW MY ROOM
+    public static void viewMyRoom(String tenantName) {
+        for (Room r : rooms) {
+            if (tenantName.equals(r.bookedBy)) {
+                System.out.println("✅ Your Room:");
+                System.out.println("Room ID: " + r.roomId +
+                        " | Type: " + r.type +
+                        " | Rent: ₹" + r.rent);
+                return;
+            }
+        }
+        System.out.println("❌ No room booked.");
+    }
+}
+
+class PaymentService {
+
+    static HashMap<String, Double> payments = new HashMap<>();
+
+    public static void payRent(String tenantName, double amount) {
+        payments.put(tenantName, amount);
+        System.out.println("✅ Rent payment of ₹" + amount + " successful.");
+    }
+}
 
 
 public class Main {
@@ -266,6 +364,7 @@ public class Main {
                     System.out.println("👋 Goodbye!");
                     return;
 
+
                 default:
                     System.out.println("Invalid menu option.");
             }
@@ -290,24 +389,24 @@ public class Main {
             }
         }
         // ✅ Email validation
-        
-while (true) {
-    System.out.print("Email: ");
-    email = sc.nextLine();
 
-    if (!Validator.isValidEmail(email)) {
-        System.out.println("Invalid email format.");
-        continue;
-    }
+        while (true) {
+            System.out.print("Email: ");
+            email = sc.nextLine();
 
-    // ✅ CHECK DUPLICATE HERE (IMMEDIATE)
-    if (AuthService.emails.contains(email)) {
-        System.out.println("Email already exists.");
-        continue;
-    }
+            if (!Validator.isValidEmail(email)) {
+                System.out.println("Invalid email format.");
+                continue;
+            }
 
-    break; // ✅ only when valid + unique
-}
+            // ✅ CHECK DUPLICATE HERE (IMMEDIATE)
+            if (AuthService.emails.contains(email)) {
+                System.out.println("Email already exists.");
+                continue;
+            }
+
+            break; // ✅ only when valid + unique
+        }
 
         // ✅ Password validation
         while (true) {
@@ -359,6 +458,8 @@ while (true) {
     // ================= LOGIN =================
     static void handleLogin() {
 
+    while (true) {
+
         System.out.print("Email: ");
         String email = sc.nextLine();
 
@@ -369,10 +470,42 @@ while (true) {
 
         if (user != null) {
             handleUser(user);
+            return; // ✅ exit login after success
         } else {
-            System.out.println("Invalid login credentials.");
+            System.out.println("\n❌ Invalid credentials!");
+            System.out.println("1. Try Again");
+            System.out.println("2. Forgot Password");
+            System.out.println("3. Back to Main Menu");
+            System.out.print("Enter choice: ");
+
+            if (sc.hasNextInt()) {
+                int choice = sc.nextInt();
+                sc.nextLine(); // clear buffer
+
+                switch (choice) {
+                    case 1:
+                        // loop continues → retry login
+                        break;
+
+                    case 2:
+                        handleForgotPassword(); // ✅ call method
+                        break;
+
+                    case 3:
+                        return; // ✅ go back to main menu
+
+                    default:
+                        System.out.println("Invalid option.");
+                }
+
+            } else {
+                System.out.println("Invalid input.");
+                sc.next(); // clear input
+            }
         }
     }
+}
+
 
     // ================= USER MENU =================
     static void handleUser(User user) {
@@ -414,27 +547,47 @@ while (true) {
                     default:
                         System.out.println("Invalid choice.");
                 }
+            }else if (user instanceof Tenant) {
+
+    switch (choice) {
+
+        case 1:
+            RoomService.viewRooms();
+
+            sc.nextLine(); // ✅ fix buffer
+            System.out.print("Do you want to book a room? (yes/no): ");
+            String ans = sc.nextLine();
+
+            if (ans.equalsIgnoreCase("yes")) {
+                System.out.print("Enter Room ID to book: ");
+                int roomId = sc.nextInt();
+
+                RoomService.bookRoom(roomId, user.name);
             }
+            break;
 
-            // ================= TENANT =================
-            else if (user instanceof Tenant) {
-                switch (choice) {
+        case 2:
+            sc.nextLine(); 
+            System.out.print("Enter complaint: ");
+            String desc = sc.nextLine();
 
-                    case 2:
-                        sc.nextLine();
-                        System.out.print("Enter complaint: ");
-                        String desc = sc.nextLine();
+            ComplaintService.raiseComplaint(desc);
+            break;
 
-                        ComplaintService.raiseComplaint(desc);
-                        break;
+        case 3:
+            System.out.print("Enter rent amount: ");
+            double amount = sc.nextDouble();
 
-                    case 4:
-                        return;
+            PaymentService.payRent(user.name, amount);
+            break;
 
-                    default:
-                        System.out.println("Invalid choice.");
-                }
-            }
+        case 4:
+            return;
+
+        default:
+            System.out.println("Invalid choice.");
+    }
+}
 
             // ================= ADMIN =================
             else if (user instanceof Admin) {
@@ -471,4 +624,12 @@ while (true) {
             }
         }
     }
+    
+     // ================= Forget Password =================
+    static void handleForgotPassword() {
+    System.out.print("Enter your registered email: ");
+    String email = sc.nextLine();
+
+    AuthService.forgotPassword(email);
+}
 }

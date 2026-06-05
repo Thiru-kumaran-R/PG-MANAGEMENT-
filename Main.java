@@ -79,7 +79,9 @@ class Tenant extends User {
         System.out.println("1. View Rooms");
         System.out.println("2. Raise Complaint");
         System.out.println("3. Pay Rent");
-        System.out.println("4. Exit");
+        System.out.println("4. View Payments");
+        System.out.println("5. Exit");
+        
     }
 }
 
@@ -165,7 +167,7 @@ class AuthService {
         System.out.println("❌ Invalid credentials!");
         return null;
     }
-    
+
     public static void forgotPassword(String email) {
     for (User u : users) {
         if (u.getEmail().equals(email)) {
@@ -309,20 +311,56 @@ class RoomService {
                 System.out.println("Room ID: " + r.roomId +
                         " | Type: " + r.type +
                         " | Rent: ₹" + r.rent);
-                return;
+                return; 
             }
         }
         System.out.println("❌ No room booked.");
     }
 }
 
+class Payment {
+
+    String tenantName;
+    double amount;
+
+    Payment(String tenantName, double amount) {
+        this.tenantName = tenantName;
+        this.amount = amount;
+    }
+}
+
 class PaymentService {
 
-    static HashMap<String, Double> payments = new HashMap<>();
+    static ArrayList<Payment> payments = new ArrayList<>();
 
     public static void payRent(String tenantName, double amount) {
-        payments.put(tenantName, amount);
+
+        payments.add(new Payment(tenantName, amount));
+
         System.out.println("✅ Rent payment of ₹" + amount + " successful.");
+    }
+
+    // ✅ View payment history
+    public static void viewPayments(String tenantName) {
+
+        double total = 0;
+        boolean found = false;
+
+        System.out.println("\n--- Payment History ---");
+
+        for (Payment p : payments) {
+            if (p.tenantName.equals(tenantName)) {
+                System.out.println("₹ " + p.amount);
+                total += p.amount;
+                found = true;
+            }
+        }
+
+        if (!found) {
+            System.out.println("❌ No payments found.");
+        } else {
+            System.out.println("Total Paid: ₹" + total);
+        }
     }
 }
 
@@ -580,9 +618,16 @@ public class Main {
 
             PaymentService.payRent(user.name, amount);
             break;
-
+            
         case 4:
+            PaymentService.viewPayments(user.name);
+            break;
+
+        case 5:
             return;
+        
+       
+
 
         default:
             System.out.println("Invalid choice.");
@@ -624,7 +669,7 @@ public class Main {
             }
         }
     }
-    
+
      // ================= Forget Password =================
     static void handleForgotPassword() {
     System.out.print("Enter your registered email: ");

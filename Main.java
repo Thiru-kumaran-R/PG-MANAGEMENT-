@@ -17,17 +17,32 @@ abstract class User {
         this.approved = false;
     }
 
-    public String getEmail() { return email; }
-    public String getPassword() { return password; }
-    public String getRole() { return role; }
-    public boolean isApproved() { return approved; }
-    public void approve() { this.approved = true; }
-    public void setPassword(String password) { this.password = password; }
+    public String getEmail() {
+        return email;
+    }
+
+    public String getPassword() {
+        return password;
+    }
+
+    public String getRole() {
+        return role;
+    }
+
+    public boolean isApproved() {
+        return approved;
+    }
+
+    public void approve() {
+        this.approved = true;
+    }
+
+    public void setPassword(String password) {
+        this.password = password;
+    }
 
     public abstract void showMenu();
 }
-
-// ================= USERS =================
 
 class Admin extends User {
     public Admin(int id, String name, String email, String password) {
@@ -36,10 +51,11 @@ class Admin extends User {
     }
 
     public void showMenu() {
-        System.out.println("\n--- ADMIN ---");
+        System.out.println("\n--- ADMIN DASHBOARD ---");
         System.out.println("1. Approve Users");
         System.out.println("2. Monitor Complaints");
-        System.out.println("3. Exit");
+        System.out.println("3. Approve Properties");
+        System.out.println("4. Exit");
     }
 }
 
@@ -48,13 +64,15 @@ class Owner extends User {
         super(id, name, email, password, "OWNER");
     }
 
+    @Override
     public void showMenu() {
-        System.out.println("\n--- OWNER ---");
+        System.out.println("\n===== OWNER MENU =====");
         System.out.println("1. Add Property");
         System.out.println("2. View Properties");
         System.out.println("3. Update Property");
-        System.out.println("4. Add Room to Property");
-        System.out.println("5. Exit");
+        System.out.println("4. Delete Property");
+        System.out.println("5. Logout");
+        System.out.print("Enter choice: ");
     }
 }
 
@@ -64,13 +82,14 @@ class Tenant extends User {
     }
 
     public void showMenu() {
-        System.out.println("\n--- TENANT ---");
-        System.out.println("1. View Properties & Rooms");
-        System.out.println("2. Book Room");
-        System.out.println("3. Raise Complaint");
-        System.out.println("4. Pay Rent");
-        System.out.println("5. View Payments");
+        System.out.println("\n--- TENANT DASHBOARD ---");
+        System.out.println("1. View Rooms");
+        System.out.println("2. Raise Complaint");
+        System.out.println("3. Pay Rent");
+        System.out.println("4. View Payments");
+        System.out.println("5. Submit KYC");
         System.out.println("6. Exit");
+
     }
 }
 
@@ -80,12 +99,267 @@ class Staff extends User {
     }
 
     public void showMenu() {
-        System.out.println("\n--- STAFF ---");
-        System.out.println("1. Exit");
+        System.out.println("\n--- STAFF DASHBOARD ---");
+        System.out.println("1. View Tasks");
+        System.out.println("2. Update Task");
+        System.out.println("3. Exit");
     }
 }
 
-// ================= PROPERTY & ROOM =================
+
+class AuthService {
+
+    static ArrayList<User> users = new ArrayList<>();
+    static ArrayList<String> emails = new ArrayList<>();
+    static int idCounter = 1;
+
+    public static void register(String name, String email, String pass, String role) {
+
+
+        if (emails.contains(email)) {
+            System.out.println("Email already exists. Try another.");
+            return; // stop registration
+        }
+
+        User user = null;
+
+        switch (role.toUpperCase()) {
+            case "ADMIN":
+                user = new Admin(idCounter++, name, email, pass);
+                break;
+            case "OWNER":
+                user = new Owner(idCounter++, name, email, pass);
+                break;
+            case "TENANT":
+                user = new Tenant(idCounter++, name, email, pass);
+                break;
+            case "STAFF":
+                user = new Staff(idCounter++, name, email, pass);
+                break;
+        }
+
+        // ✅ Add user and email only if valid
+        if (user != null) {
+            users.add(user);
+            emails.add(email);  // ✅ store email
+
+            System.out.println("Registered Successfully. Awaiting approval (if not admin).");
+        }
+    }
+
+    public static User login(String email, String pass) {
+        for (User u : users) {
+            if (u.getEmail().equals(email) && u.getPassword().equals(pass)) {
+                if (!u.isApproved()) {
+                    System.out.println("Waiting for admin approval.");
+                    return null;
+                }
+                System.out.println("✅ Login successful!");
+                return u;
+            }
+        }
+        System.out.println("❌ Invalid credentials!");
+        return null;
+    }
+
+    public static void forgotPassword(String email, Scanner sc) {
+
+        for(User u : users) {
+
+            if(u.getEmail().equals(email)) {
+
+                System.out.print("Enter New Password: ");
+                String newPass = sc.nextLine();
+
+                System.out.print("Confirm Password: ");
+                String confirmPass = sc.nextLine();
+
+                if(newPass.equals(confirmPass)) {
+
+                    u.setPassword(newPass);
+
+                    System.out.println("✅ Password Updated Successfully");
+
+                } else {
+
+                    System.out.println("❌ Passwords do not match");
+                }
+
+                return;
+            }
+        }
+
+        System.out.println("❌ Email not registered");
+    }
+
+}
+
+class Validator {
+    public static boolean isValidName(String name) {
+        return name != null && name.matches("^[a-zA-Z ]+$");
+    }
+
+    public static boolean isValidEmail(String email) {
+        return email.contains("@") && email.endsWith(".com");
+    }
+
+    public static boolean isValidPassword(String pass) {
+        return pass.length() >= 6;
+    }
+}
+
+class PropertyService {
+
+    static ArrayList<Property> properties = new ArrayList<>();
+    static int idCounter = 1;
+
+    // ✅ Add Property
+    public static void addProperty(String addr, String facilities, int rooms) {
+        Property p = new Property(idCounter++, addr, facilities, rooms);
+        properties.add(p);
+        System.out.println("✅ Property added and sent for approval.");
+    }
+
+    // ✅ View All Properties
+    public static void viewProperties() {
+        if (properties.isEmpty()) {
+            System.out.println("No properties available.");
+            return;
+        }
+
+        for (Property p : properties) {
+            p.display();
+        }
+    }
+
+    // ✅ Update Property
+    public static void updateProperty(int id, String newAddr, String newFacilities, int newRooms) {
+
+        for (Property p : properties) {
+            if (p.id == id) {
+
+                p.address = newAddr;
+                p.facilities = newFacilities;
+                p.availableRooms = newRooms;
+
+                System.out.println("✅ Property updated successfully.");
+                return;
+            }
+        }
+
+        System.out.println("❌ Property not found.");
+    }
+
+    // ✅ Delete Property
+    public static void deleteProperty(int id) {
+
+        for (Property p : properties) {
+            if (p.id == id) {
+                properties.remove(p);
+                System.out.println("✅ Property deleted successfully.");
+                return;
+            }
+        }
+
+        System.out.println("❌ Property not found.");
+    }
+    
+    // ✅ Approve Property (Admin Only)
+    public static void approveProperty(int id) {
+    
+        for (Property p : properties) {
+            if (p.id == id) {
+                p.status = "APPROVED";
+                System.out.println("✅ Property approved successfully.");
+                return;
+            }
+        }
+    
+        System.out.println("❌ Property not found.");
+    }
+    
+    public static void viewPendingProperties() {
+
+        boolean found = false;
+    
+        for (Property p : properties) {
+            if (p.status.equals("PENDING")) {
+                p.display();
+                found = true;
+            }
+        }
+    
+        if (!found) {
+            System.out.println("No pending properties.");
+        }
+    }
+}
+
+class Property {
+
+    int id;
+    String address;
+    String facilities;
+    int availableRooms;
+    String status;
+
+    public Property(int id, String address, String facilities, int availableRooms) {
+        this.id = id;
+        this.address = address;
+        this.facilities = facilities;
+        this.availableRooms = availableRooms;
+        this.status = "PENDING";
+    }
+
+    public void display() {
+        System.out.println("ID: " + id
+                + " | Address: " + address
+                + " | Facilities: " + facilities
+                + " | Available Rooms: " + availableRooms
+                + " | Status: " + status);
+    }
+}
+
+class Complaint {
+    int id;
+    String description;
+    String status;
+
+    public Complaint(int id, String desc) {
+        this.id = id;
+        this.description = desc;
+        this.status = "PENDING";
+    }
+}
+
+class ComplaintService {
+    static ArrayList<Complaint> complaints = new ArrayList<>();
+    static int idCounter = 1;
+
+    public static void raiseComplaint(String desc) {
+        complaints.add(new Complaint(idCounter++, desc));
+        System.out.println("✅ Complaint submitted.");
+    }
+
+    public static void viewComplaints() {
+        for (Complaint c : complaints) {
+            System.out.println("ID: " + c.id + " | " + c.description + " | Status: " + c.status);
+        }
+    }
+
+    public static void resolveComplaint(int id) {
+        for (Complaint c : complaints) {
+            if (c.id == id) {
+                c.status = "RESOLVED";
+                System.out.println("✅ Complaint resolved.");
+                return;
+            }
+        }
+        System.out.println("❌ Complaint not found.");
+    }
+}
+
+//Tenant
 
 class Room {
     int roomId;
@@ -99,380 +373,521 @@ class Room {
         this.type = type;
         this.rent = rent;
         this.available = true;
+        this.bookedBy = null;
     }
 }
 
-class Property {
-    int id;
-    String address;
-    String facilities;
-    String status;
+class RoomService {
+    static ArrayList<Room> rooms = new ArrayList<>();
 
-    ArrayList<Room> rooms = new ArrayList<>();
-    int freeRooms = 0;
-
-    public Property(int id, String address, String facilities) {
-        this.id = id;
-        this.address = address;
-        this.facilities = facilities;
-        this.status = "PENDING";
+    static {
+        rooms.add(new Room(101, "Single", 11000));
+        rooms.add(new Room(104, "Double", 9000));
+        rooms.add(new Room(133, "Triple", 7000));
+        rooms.add(new Room(243, "Double", 9000));
+        rooms.add(new Room(333, "Triple", 9500)); // ✅ fixed duplicate ID
     }
 
-    public void addRoom(int roomId, String type, double rent) {
-        rooms.add(new Room(roomId, type, rent));
-        freeRooms++;
-    }
-
-    public void updateFreeRooms() {
-        int count = 0;
+    public static void viewRooms() {
+        System.out.println("\nAvailable Rooms:");
         for (Room r : rooms) {
-            if (r.available) count++;
+            if (r.available) {
+                System.out.println("Room ID: " + r.roomId +
+                        " | Type: " + r.type +
+                        " | Rent: ₹" + r.rent);
+            }
         }
-        freeRooms = count;
-    }
-}
-
-class PropertyService {
-    static ArrayList<Property> properties = new ArrayList<>();
-    static int idCounter = 1;
-
-    public static void addProperty(String addr, String facilities) {
-        properties.add(new Property(idCounter++, addr, facilities));
-        System.out.println("✅ Property added");
     }
 
-    public static void updateProperty(int id, String addr, String fac) {
-        for (Property p : properties) {
-            if (p.id == id) {
-                p.address = addr;
-                p.facilities = fac;
-                System.out.println("✅ Updated");
+    // ✅ BOOK ROOM (FIXED LOCATION)
+    public static void bookRoom(int roomId, String tenantName) {
+        for (Room r : rooms) {
+            if (r.roomId == roomId && r.available) {
+                r.available = false;
+                r.bookedBy = tenantName;
+                System.out.println("✅ Room booked successfully!");
                 return;
             }
         }
-        System.out.println("❌ Not found");
+        System.out.println("❌ Room not available.");
     }
 
-    public static void addRoomToProperty(int propertyId, int roomId, String type, double rent) {
-        for (Property p : properties) {
-            if (p.id == propertyId) {
-                p.addRoom(roomId, type, rent);
-                System.out.println("✅ Room added");
+    // ✅ OPTIONAL: VIEW MY ROOM
+    public static void viewMyRoom(String tenantName) {
+        for (Room r : rooms) {
+            if (tenantName.equals(r.bookedBy)) {
+                System.out.println("✅ Your Room:");
+                System.out.println("Room ID: " + r.roomId +
+                        " | Type: " + r.type +
+                        " | Rent: ₹" + r.rent);
                 return;
             }
         }
-        System.out.println("❌ Property not found");
-    }
-
-    public static void viewProperties() {
-        for (Property p : properties) {
-            System.out.println("\nID: " + p.id +
-                    " | Address: " + p.address +
-                    " | Free Rooms: " + p.freeRooms);
-
-            for (Room r : p.rooms) {
-                System.out.println("   Room " + r.roomId +
-                        " | " + r.type +
-                        " | ₹" + r.rent +
-                        " | Available: " + r.available +
-                        " | Tenant: " + r.bookedBy);
-            }
-        }
-    }
-
-    public static void bookRoom(int propertyId, int roomId, String tenant) {
-        for (Property p : properties) {
-            if (p.id == propertyId) {
-                for (Room r : p.rooms) {
-                    if (r.roomId == roomId && r.available) {
-                        r.available = false;
-                        r.bookedBy = tenant;
-                        p.updateFreeRooms();
-                        System.out.println("✅ Room booked");
-                        return;
-                    }
-                }
-            }
-        }
-        System.out.println("❌ Booking failed");
+        System.out.println("❌ No room booked.");
     }
 }
-
-// ================= AUTH =================
-
-class AuthService {
-    static ArrayList<User> users = new ArrayList<>();
-    static int idCounter = 1;
-
-    public static void register(String name, String email, String pass, String role) {
-        User u = null;
-
-        switch (role) {
-            case "ADMIN": u = new Admin(idCounter++, name, email, pass); break;
-            case "OWNER": u = new Owner(idCounter++, name, email, pass); break;
-            case "TENANT": u = new Tenant(idCounter++, name, email, pass); break;
-            case "STAFF": u = new Staff(idCounter++, name, email, pass); break;
-        }
-
-        if (u != null) {
-            users.add(u);
-            System.out.println("✅ Registered");
-        }
-    }
-
-    public static User login(String email, String pass) {
-        for (User u : users) {
-            if (u.getEmail().equals(email) && u.getPassword().equals(pass)) {
-                if (!u.isApproved()) return null;
-                return u;
-            }
-        }
-        return null;
-    }
-}
-
-// ================= COMPLAINT =================
-
-class Complaint {
-    int id;
-    String desc;
-    String status;
-
-    Complaint(int id, String d) {
-        this.id = id;
-        this.desc = d;
-        status = "PENDING";
-    }
-}
-
-class ComplaintService {
-    static ArrayList<Complaint> list = new ArrayList<>();
-    static int idCounter = 1;
-
-    public static void raise(String d) {
-        list.add(new Complaint(idCounter++, d));
-    }
-}
-
-// ================= PAYMENT =================
 
 class Payment {
-    String name;
+
+    String tenantName;
     double amount;
 
-    Payment(String n, double a) {
-        name = n;
-        amount = a;
+    Payment(String tenantName, double amount) {
+        this.tenantName = tenantName;
+        this.amount = amount;
     }
 }
 
 class PaymentService {
-    static ArrayList<Payment> list = new ArrayList<>();
 
-    public static void pay(String name, double amt) {
-        list.add(new Payment(name, amt));
-        System.out.println("✅ Paid ₹" + amt);
+    static ArrayList<Payment> payments = new ArrayList<>();
+
+    public static void payRent(String tenantName, double amount) {
+
+        payments.add(new Payment(tenantName, amount));
+
+        System.out.println("✅ Rent payment of ₹" + amount + " successful.");
+    }
+
+    // ✅ View payment history
+    public static void viewPayments(String tenantName) {
+
+        double total = 0;
+        boolean found = false;
+
+        System.out.println("\n--- Payment History ---");
+
+        for (Payment p : payments) {
+            if (p.tenantName.equals(tenantName)) {
+                System.out.println("₹ " + p.amount);
+                total += p.amount;
+                found = true;
+            }
+        }
+
+        if (!found) {
+            System.out.println("❌ No payments found.");
+        } else {
+            System.out.println("Total Paid: ₹" + total);
+        }
     }
 }
 
-// ================= MAIN =================
+class KYC {
+
+    String phoneNumber;
+    String panNumber;
+    String aadhaarNumber;
+
+    public KYC(String phoneNumber,
+               String panNumber,
+               String aadhaarNumber) {
+
+        this.phoneNumber = phoneNumber;
+        this.panNumber = panNumber;
+        this.aadhaarNumber = aadhaarNumber;
+    }
+}
+
+class KYCService {
+
+    static ArrayList<KYC> kycList = new ArrayList<>();
+
+    public static void submitKYC(String phone,
+                                 String pan,
+                                 String aadhaar) {
+
+        if (!phone.matches("\\d{10}")) {
+            System.out.println("❌ Invalid Phone Number");
+            return;
+        }
+
+        if (!pan.matches("[A-Z]{5}[0-9]{4}[A-Z]")) {
+            System.out.println("❌ Invalid PAN Number");
+            return;
+        }
+
+        if (!aadhaar.matches("\\d{12}")) {
+            System.out.println("❌ Invalid Aadhaar Number");
+            return;
+        }
+
+        kycList.add(new KYC(phone, pan, aadhaar));
+
+        System.out.println("✅ KYC Submitted Successfully");
+    }
+}
+
+
 
 public class Main {
+
     static Scanner sc = new Scanner(System.in);
 
     public static void main(String[] args) {
 
         while (true) {
-            System.out.println("========= Welcome to PG Management ===========");
+
+            System.out.println("\n====== PG MANAGEMENT SYSTEM ======");
             System.out.println("1. Register");
             System.out.println("2. Login");
             System.out.println("3. Exit");
+            System.out.print("Enter choice: ");
 
-            int ch = sc.nextInt();
+            if (!sc.hasNextInt()) {
+                System.out.println("Invalid input. Please enter a number.");
+                sc.next(); // clear invalid input
+                continue;
+            }
 
-            switch (ch) {
+            int choice = sc.nextInt();
+            sc.nextLine();
+
+            switch (choice) {
+
                 case 1:
-                    sc.nextLine();
-                    System.out.print("Name: ");
-                    String n = sc.nextLine();
-
-                    System.out.print("Email: ");
-                    String e = sc.nextLine();
-
-                    System.out.print("Password: ");
-                    String p = sc.nextLine();
-
-                    // ✅ ROLE SELECTION MENU
-                    System.out.println("Select Role:");
-                    System.out.println("1. ADMIN");
-                    System.out.println("2. OWNER");
-                    System.out.println("3. TENANT");
-                    System.out.println("4. STAFF");
-                    System.out.print("Enter choice: ");
-
-                    int roleChoice = sc.nextInt();
-                    sc.nextLine();
-
-                    String r = "";
-
-                    switch (roleChoice) {
-                        case 1: r = "ADMIN"; break;
-                        case 2: r = "OWNER"; break;
-                        case 3: r = "TENANT"; break;
-                        case 4: r = "STAFF"; break;
-                        default:
-                            System.out.println("❌ Invalid role selected");
-                            continue;
-                    }
-
-                    AuthService.register(n, e, p, r);
+                    handleRegister();
                     break;
 
                 case 2:
-                    sc.nextLine();
-                    System.out.print("Email: ");
-                    e = sc.nextLine();
-
-                    System.out.print("Password: ");
-                    p = sc.nextLine();
-
-                    User user = AuthService.login(e, p);
-
-                    if (user != null) {
-                        handleUser(user);
-                    } else {
-                        System.out.println("❌ Login Failed");
-                    }
+                    handleLogin();
                     break;
 
                 case 3:
-                    System.out.println("👋 Exiting...");
+                    System.out.println("👋 Goodbye!");
                     return;
 
+
                 default:
-                    System.out.println("❌ Invalid option");
+                    System.out.println("Invalid menu option.");
             }
         }
     }
 
-    // ================= HANDLE USER =================
-    static void handleUser(User u) {
+    // ================= REGISTER =================
+    static void handleRegister() {
+
+        String name, email, pass;
+        int roleChoice;
+
+        // ✅ Name validation
+        while (true) {
+            System.out.print("Name: ");
+            name = sc.nextLine();
+
+            if (Validator.isValidName(name)) {
+                break;
+            } else {
+                System.out.println("Name must contain only letters and spaces.");
+            }
+        }
+        // ✅ Email validation
 
         while (true) {
-            u.showMenu();
-            int ch = sc.nextInt();
+            System.out.print("Email: ");
+            email = sc.nextLine();
+
+            if (!Validator.isValidEmail(email)) {
+                System.out.println("Invalid email format.");
+                continue;
+            }
+
+            // ✅ CHECK DUPLICATE HERE (IMMEDIATE)
+            if (AuthService.emails.contains(email)) {
+                System.out.println("Email already exists.");
+                continue;
+            }
+
+            break; // ✅ only when valid + unique
+        }
+
+        // ✅ Password validation
+        while (true) {
+            System.out.print("Password: ");
+            pass = sc.nextLine();
+
+            if (Validator.isValidPassword(pass)) {
+                break;
+            } else {
+                System.out.println("Password must be at least 6 characters.");
+            }
+        }
+
+        // ✅ Role selection
+        while (true) {
+            System.out.println("Select Role:");
+            System.out.println("1. ADMIN");
+            System.out.println("2. OWNER");
+            System.out.println("3. TENANT");
+            System.out.println("4. STAFF");
+            System.out.print("Enter choice: ");
+
+            if (sc.hasNextInt()) {
+                roleChoice = sc.nextInt();
+                sc.nextLine();
+
+                if (roleChoice >= 1 && roleChoice <= 4) {
+                    break;
+                } else {
+                    System.out.println("Invalid role selection.");
+                }
+            } else {
+                System.out.println("Enter a valid number.");
+                sc.next(); // clear invalid input
+            }
+        }
+
+        String role = switch (roleChoice) {
+            case 1 -> "ADMIN";
+            case 2 -> "OWNER";
+            case 3 -> "TENANT";
+            case 4 -> "STAFF";
+            default -> "";
+        };
+
+        AuthService.register(name, email, pass, role);
+    }
+
+    // ================= LOGIN =================
+    static void handleLogin() {
+
+        while (true) {
+
+            System.out.print("Email: ");
+            String email = sc.nextLine();
+
+            System.out.print("Password: ");
+            String pass = sc.nextLine();
+
+            User user = AuthService.login(email, pass);
+
+            if (user != null) {
+                handleUser(user);
+                return; // ✅ exit login after success
+            } else {
+                System.out.println("\n❌ Invalid credentials!");
+                System.out.println("1. Try Again");
+                System.out.println("2. Forgot Password");
+                System.out.println("3. Back to Main Menu");
+                System.out.print("Enter choice: ");
+
+                if (sc.hasNextInt()) {
+                    int choice = sc.nextInt();
+                    sc.nextLine(); // clear buffer
+
+                    switch (choice) {
+                        case 1:
+                            // loop continues → retry login
+                            break;
+
+                        case 2:
+                            handleForgotPassword(); // ✅ call method
+                            break;
+
+                        case 3:
+                            return; // ✅ go back to main menu
+
+                        default:
+                            System.out.println("Invalid option.");
+                    }
+
+                } else {
+                    System.out.println("Invalid input.");
+                    sc.next(); // clear input
+                }
+            }
+        }
+    }
+
+
+    // ================= USER MENU =================
+    static void handleUser(User user) {
+
+        while (true) {
+
+            user.showMenu();
+
+            if (!sc.hasNextInt()) {
+                System.out.println("Invalid input.");
+                sc.next();
+                continue;
+            }
+
+            int choice = sc.nextInt();
 
             // ================= OWNER =================
-            if (u instanceof Owner) {
+            if (user instanceof Owner) {
+    switch (choice) {
 
-                switch (ch) {
+        case 1:
+            sc.nextLine();
+
+            System.out.print("Enter PG Address: ");
+            String addr = sc.nextLine();
+
+            System.out.print("Enter Facilities: ");
+            String fac = sc.nextLine();
+
+            System.out.print("Enter Available Rooms: ");
+            int rooms = sc.nextInt();
+
+            PropertyService.addProperty(addr, fac, rooms);
+            break;
+
+        case 2:
+            PropertyService.viewProperties();
+            break;
+
+        case 3:
+            System.out.print("Enter Property ID to update: ");
+            int upId = sc.nextInt();
+            sc.nextLine();
+
+            System.out.print("New Address: ");
+            String newAddr = sc.nextLine();
+
+            System.out.print("New Facilities: ");
+            String newFac = sc.nextLine();
+
+            System.out.print("New Available Rooms: ");
+            int newRooms = sc.nextInt();
+
+            PropertyService.updateProperty(upId, newAddr, newFac, newRooms);
+            break;
+
+        case 4:
+            System.out.print("Enter Property ID to delete: ");
+            int delId = sc.nextInt();
+
+            PropertyService.deleteProperty(delId);
+            break;
+
+        case 5:
+            return;
+
+        default:
+            System.out.println("Invalid choice.");
+    }
+}
+
+            else if (user instanceof Tenant) {
+
+                switch (choice) {
+
                     case 1:
-                        sc.nextLine();
-                        System.out.print("Address: ");
-                        String addr = sc.nextLine();
+                        RoomService.viewRooms();
 
-                        System.out.print("Facilities: ");
-                        String fac = sc.nextLine();
+                        sc.nextLine(); // ✅ fix buffer
+                        System.out.print("Do you want to book a room? (yes/no): ");
+                        String ans = sc.nextLine();
 
-                        PropertyService.addProperty(addr, fac);
+                        if (ans.equalsIgnoreCase("yes")) {
+                            System.out.print("Enter Room ID to book: ");
+                            int roomId = sc.nextInt();
+
+                            RoomService.bookRoom(roomId, user.name);
+                        }
                         break;
 
                     case 2:
-                        PropertyService.viewProperties();
+                        sc.nextLine();
+                        System.out.print("Enter complaint: ");
+                        String desc = sc.nextLine();
+
+                        ComplaintService.raiseComplaint(desc);
                         break;
 
                     case 3:
-                        System.out.print("Property ID: ");
-                        int id = sc.nextInt();
-                        sc.nextLine();
+                        System.out.print("Enter rent amount: ");
+                        double amount = sc.nextDouble();
 
-                        System.out.print("New Address: ");
-                        String na = sc.nextLine();
-
-                        System.out.print("New Facilities: ");
-                        String nf = sc.nextLine();
-
-                        PropertyService.updateProperty(id, na, nf);
+                        PaymentService.payRent(user.name, amount);
                         break;
 
                     case 4:
-                        System.out.print("Property ID: ");
-                        int pid = sc.nextInt();
-
-                        System.out.print("Room ID: ");
-                        int rid = sc.nextInt();
-                        sc.nextLine();
-
-                        System.out.print("Type: ");
-                        String type = sc.nextLine();
-
-                        System.out.print("Rent: ");
-                        double rent = sc.nextDouble();
-
-                        PropertyService.addRoomToProperty(pid, rid, type, rent);
+                        PaymentService.viewPayments(user.name);
                         break;
 
                     case 5:
-                        return;
 
-                    default:
-                        System.out.println("❌ Invalid choice");
-                }
-            }
-
-            // ================= TENANT =================
-            else if (u instanceof Tenant) {
-
-                switch (ch) {
-                    case 1:
-                        PropertyService.viewProperties();
-                        break;
-
-                    case 2:
-                        System.out.print("Property ID: ");
-                        int pid = sc.nextInt();
-
-                        System.out.print("Room ID: ");
-                        int rid = sc.nextInt();
-
-                        PropertyService.bookRoom(pid, rid, u.name);
-                        break;
-
-                    case 3:
                         sc.nextLine();
-                        System.out.print("Complaint: ");
-                        String d = sc.nextLine();
 
-                        ComplaintService.raise(d);
-                        break;
+                        System.out.print("Enter Phone Number: ");
+                        String phone = sc.nextLine();
 
-                    case 4:
-                        System.out.print("Amount: ");
-                        double amt = sc.nextDouble();
+                        System.out.print("Enter PAN Number: ");
+                        String pan = sc.nextLine().toUpperCase();
 
-                        PaymentService.pay(u.name, amt);
+                        System.out.print("Enter Aadhaar Number: ");
+                        String aadhaar = sc.nextLine();
+
+                        KYCService.submitKYC(phone, pan, aadhaar);
+
                         break;
 
                     case 6:
                         return;
 
+
+
+
                     default:
-                        System.out.println("❌ Invalid choice");
+                        System.out.println("Invalid choice.");
                 }
             }
 
             // ================= ADMIN =================
-            else if (u instanceof Admin) {
+            else if (user instanceof Admin) {
+                switch (choice) {
 
-                if (ch == 3) return;
+                    case 1:
+                        for (User u : AuthService.users) {
+                            if (!u.isApproved()) {
+                                u.approve();
+                                System.out.println("Approved: " + u.name);
+                            }
+                        }
+                        break;
 
-                for (User usr : AuthService.users) {
-                    if (!usr.isApproved()) {
-                        usr.approve();
-                    }
+                    case 2:
+                        ComplaintService.viewComplaints();
+                        System.out.print("Enter complaint ID to resolve: ");
+
+                        if (sc.hasNextInt()) {
+                            int id = sc.nextInt();
+                            ComplaintService.resolveComplaint(id);
+                        } else {
+                            System.out.println("Invalid ID.");
+                            sc.next();
+                        }
+                        break;
+                        
+                    case 3:
+                        
+                        PropertyService.viewPendingProperties();
+            
+                        System.out.print("Enter Property ID to approve: ");
+                        int pid = sc.nextInt();
+            
+                        PropertyService.approveProperty(pid);
+                        break;
+
+
+                    case 4:
+                        return;
+
+                    default:
+                        System.out.println("Invalid choice.");
                 }
-                System.out.println("✅ Approved all users");
             }
         }
+    }
+
+    static void handleForgotPassword() {
+
+        System.out.print("Enter your registered email: ");
+        String email = sc.nextLine();
+
+        AuthService.forgotPassword(email, sc);
     }
 }
